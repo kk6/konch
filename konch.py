@@ -320,6 +320,20 @@ class PtPythonShell(Shell):
         self.ptpy_vi_mode = ptpy_vi_mode
         Shell.__init__(self, *args, **kwargs)
 
+    def _load_configure(self):
+        import importlib.util
+        from pathlib import Path
+        path = Path.home() / ".ptpython/config.py"
+        spec = importlib.util.spec_from_file_location("config", path)
+        config = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(config)
+        except FileNotFoundError:
+            configure = None
+        else:
+            configure = config.configure
+        return configure
+
     def check_availability(self):
         try:
             import ptpython  # flake8: noqa
@@ -332,7 +346,8 @@ class PtPythonShell(Shell):
         except ImportError:
             raise ShellNotAvailableError('PtPython shell not available.')
         print(self.banner)
-        embed(globals=self.context, vi_mode=self.ptpy_vi_mode)
+        configure = self._load_configure()
+        embed(globals=self.context, vi_mode=self.ptpy_vi_mode, configure=configure)
         return None
 
 
